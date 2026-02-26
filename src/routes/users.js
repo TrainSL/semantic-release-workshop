@@ -26,6 +26,9 @@ router.get('/', (req, res) => {
  */
 router.get('/:id', (req, res) => {
   const id = parseInt(req.params.id, 10);
+  if (Number.isNaN(id)) {
+    return res.status(400).json({ error: 'Invalid user id' });
+  }
   const user = users.find((u) => u.id === id);
 
   if (!user) {
@@ -46,12 +49,15 @@ router.post('/', (req, res) => {
     return res.status(400).json({ error: 'Name and email are required' });
   }
 
-  const existingUser = users.find((u) => u.email === email);
+  const nameTrimmed = String(name).trim();
+  const emailNormalized = String(email).trim().toLowerCase();
+
+  const existingUser = users.find((u) => u.email.toLowerCase() === emailNormalized);
   if (existingUser) {
     return res.status(409).json({ error: 'A user with this email already exists' });
   }
 
-  const newUser = { id: nextId++, name, email, role };
+  const newUser = { id: nextId++, name: nameTrimmed, email: emailNormalized, role };
   users.push(newUser);
 
   res.status(201).json(newUser);
@@ -63,6 +69,10 @@ router.post('/', (req, res) => {
  */
 router.put('/:id', (req, res) => {
   const id = parseInt(req.params.id, 10);
+  if (Number.isNaN(id)) {
+    return res.status(400).json({ error: 'Invalid user id' });
+  }
+
   const index = users.findIndex((u) => u.id === id);
 
   if (index === -1) {
@@ -70,7 +80,23 @@ router.put('/:id', (req, res) => {
   }
 
   const { name, email, role } = req.body;
-  users[index] = { ...users[index], ...(name && { name }), ...(email && { email }), ...(role && { role }) };
+
+  if (email) {
+    const emailNormalized = String(email).trim().toLowerCase();
+    const existing = users.find((u) => u.email.toLowerCase() === emailNormalized && u.id !== id);
+    if (existing) {
+      return res.status(409).json({ error: 'A user with this email already exists' });
+    }
+    users[index].email = emailNormalized;
+  }
+
+  if (name) {
+    users[index].name = String(name).trim();
+  }
+
+  if (role) {
+    users[index].role = role;
+  }
 
   res.json(users[index]);
 });
@@ -81,6 +107,10 @@ router.put('/:id', (req, res) => {
  */
 router.delete('/:id', (req, res) => {
   const id = parseInt(req.params.id, 10);
+  if (Number.isNaN(id)) {
+    return res.status(400).json({ error: 'Invalid user id' });
+  }
+
   const index = users.findIndex((u) => u.id === id);
 
   if (index === -1) {
@@ -92,13 +122,15 @@ router.delete('/:id', (req, res) => {
 });
 
 // Export reset function for testing
-router._resetUsers = () => {
-  users = [
-    { id: 1, name: 'Alice Johnson', email: 'alice@example.com', role: 'admin' },
-    { id: 2, name: 'Bob Smith', email: 'bob@example.com', role: 'user' },
-    { id: 3, name: 'Carol White', email: 'carol@example.com', role: 'user' },
-  ];
-  nextId = 4;
-};
+if (process.env.NODE_ENV === 'test') {
+  router._resetUsers = () => {
+    users = [
+      { id: 1, name: 'Alice Johnson', email: 'alice@example.com', role: 'admin' },
+      { id: 2, name: 'Bob Smith', email: 'bob@example.com', role: 'user' },
+      { id: 3, name: 'Carol White', email: 'carol@example.com', role: 'user' },
+    ];
+    nextId = 4;
+  };
+}
 
 module.exports = router;
