@@ -17,7 +17,7 @@ let nextId = 4;
  * Returns all users
  */
 router.get('/', (req, res) => {
-  res.json({ users, total: users.length });
+  res.json({ data: users, meta: { total: users.length } });
 });
 
 /**
