@@ -1,3 +1,15 @@
+# [2.0.0](https://github.com/TrainSL/semantic-release-workshop/compare/v1.0.0...v2.0.0) (2026-02-26)
+
+
+### Features
+
+* **users:** restructure get /users response format ([5b88017](https://github.com/TrainSL/semantic-release-workshop/commit/5b8801793d24cc1084c59b14d654447bacab7b12))
+
+
+### BREAKING CHANGES
+
+* **users:** GET /users response changed from {users, total} to {data, meta: {total}}. Clients must update to expect the new format.
+
 # 1.0.0 (2026-02-26)
 
 
