@@ -1,6 +1,8 @@
 'use strict';
 
 const express = require('express');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const indexRouter = require('./routes/index');
 const usersRouter = require('./routes/users');
 
@@ -13,31 +15,18 @@ app.disable('x-powered-by');
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: false, limit: '10kb' }));
 
-// Simple in-memory rate limiter (per-IP) for demo purposes
-const rateWindowMs = 15 * 60 * 1000; // 15 minutes
-const maxRequestsPerWindow = 100;
-const rateMap = new Map();
-app.use((req, res, next) => {
-  try {
-    const ip = req.ip || req.connection.remoteAddress || 'unknown';
-    const now = Date.now();
-    const entry = rateMap.get(ip) || { count: 0, start: now };
-    if (now - entry.start > rateWindowMs) {
-      entry.count = 1;
-      entry.start = now;
-    } else {
-      entry.count += 1;
-    }
-    rateMap.set(ip, entry);
-    if (entry.count > maxRequestsPerWindow) {
-      res.set('Retry-After', Math.ceil((entry.start + rateWindowMs - now) / 1000));
-      return res.status(429).json({ error: 'Too many requests, please try again later.' });
-    }
-  } catch (e) {
-    // Fail open on rate limiter errors
-  }
-  next();
+// Use helmet for standard security headers
+app.use(helmet());
+
+// Production-ready rate limiter
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 });
+app.use(limiter);
+
 
 // Security-related headers (minimal CSP and privacy headers)
 app.use((req, res, next) => {
